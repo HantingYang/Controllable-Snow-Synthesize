@@ -171,54 +171,6 @@ val_dataloader = DataLoader(
     num_workers=1,
 )
 
-
-def sample_images(batches_done, epoch):
-    """Saves a generated sample from the validation set"""
-    imgs = next(iter(val_dataloader))
-    img_samples = None
-    alphas = [0.1, 0.3, 0.6, 0.9]  # The alpha values
-    for img1, img2, img1_path in zip(imgs["A"], imgs["B"], imgs["A_paths"]):
-        # Create copies of image
-        X1 = img1.unsqueeze(0).repeat(opt.style_dim, 1, 1, 1)
-        # X1 [8, 3, 512, 1024]
-        X1 = Variable(X1.type(Tensor))
-        X2 = img2.unsqueeze(0).repeat(opt.style_dim, 1, 1, 1)
-        X2 = Variable(X2.type(Tensor))
-        # Get random style codes
-        s_code = np.random.uniform(-1, 1, (opt.style_dim, opt.style_dim))
-        s_code = Variable(Tensor(s_code))
-
-        # Generate samples
-        c_code_1, s_code_1 = Enc1(X1)
-        s_code_1 = EncSh(s_code_1)
-        _, s_code_2 = Enc2(X2)
-        s_code_2 = EncSh(s_code_2)
-        
-        
-        
-        X12 = Dec2(c_code_1, s_code)
-        # X12 [8, 3, 512, 1024]
-        # Concatenate samples horisontally
-        X12 = torch.cat([x for x in X12.data.cpu()], -1)
-        img_sample = torch.cat((img1, X12), -1).unsqueeze(0)
-        
-        styleregre_images = [img1.cpu().unsqueeze(0)]
-        for alpha in alphas:
-            # Get interpolated style code
-            s_code_interpolated = interpolate_style(s_code_1, s_code_2, alpha)
-            
-            X12_alpha = Dec2(c_code_1[0].unsqueeze(0), s_code_interpolated[0].unsqueeze(0))
-            
-            styleregre_images.append(X12_alpha.data.cpu())
-
-        styleregre_images = torch.cat(styleregre_images, -1).squeeze(0)
-        
-        # print(img1_path)
-        head, tail = os.path.split(img1_path)
-        # Concatenate with previous samples vertically
-        # img_samples = img_sample if img_samples is None else torch.cat((img_samples, img_sample), -2)
-        save_image(img_sample, "images/" + opt.name + "_sample" + "/epoch" + str(epoch) + "_"  + tail, nrow=5, normalize=True)
-        save_image(styleregre_images, "images/" + opt.name + "_styleregresample" + "/epoch" + str(epoch) + "_" + tail, nrow=5, normalize=True)
         
 
 
@@ -390,7 +342,6 @@ for epoch in range(opt.epoch, opt.n_epochs):
         if batches_done % opt.sample_interval == 0 and epoch >= 50:
             print("")
             print("epoch:",epoch," batches_done:",batches_done)
-            sample_images(batches_done, epoch)
             
 
     # Update learning rates
